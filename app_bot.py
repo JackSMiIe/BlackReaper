@@ -25,7 +25,7 @@ async def on_startup(bot):  # dp передается автоматически
     if run_param:
         await drop_db()
     await create_db()
-    # asyncio.create_task(check_subscriptions(session_maker())) # ятут
+    # asyncio.create_task(check_subscriptions(session_maker()))
     # asyncio.create_task(check_blacklisted_users(session_maker()))
     # asyncio.create_task(check_subscriptions_trial(session_maker()))
 
