@@ -21,3 +21,5 @@ env/
 
 # Ignore .env file explicitly
 .env
+
+database_vpn_bot.db
