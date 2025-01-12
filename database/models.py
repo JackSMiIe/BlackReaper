@@ -20,19 +20,26 @@ class User(Base, Time):
     telegram_id = Column(BigInteger, nullable=False, unique=True)
     username = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=True)
-    phone_number = Column(String, nullable=True)  # Добавлено поле для телефона
+    phone_number = Column(String, nullable=True)
+    black_list = Column(Boolean, default=False)
+    used_trial_product = Column(Boolean, default=False)
+    is_vip = Column(Boolean, default=False)  # Поле для клиентов с максимальными привилегиями
 
     subscriptions = relationship("UserSubscription", back_populates="user")
     purchases = relationship("PurchaseHistory", back_populates="user")
 
     def __repr__(self):
-        return f"<User(id={self.id}, username={self.username}, email={self.email}, phone_number={self.phone_number})>"
+        return (f"<User(id={self.id}, username={self.username}, email={self.email}, phone_number={self.phone_number}, "
+                f"black_list={self.black_list}, used_trial_product={self.used_trial_product}, is_vip={self.is_vip})>")
 
-    def __init__(self, telegram_id, username, email=None, phone_number=None):
+    def __init__(self, telegram_id, username, email=None, phone_number=None, black_list=False, used_trial_product=False, is_vip=False):
         self.telegram_id = telegram_id
         self.username = username or 'Не указано'
         self.email = email or 'Не указано'
         self.phone_number = phone_number or 'Не указано'
+        self.black_list = black_list
+        self.used_trial_product = used_trial_product
+        self.is_vip = is_vip
 
 # Модель для продуктов (подписок)
 class Product(Base, Time):
