@@ -19,5 +19,5 @@ env/
 # Logs
 *.log
 
-# SQLite database
-*.sqlite3
+# Ignore .env file explicitly
+.env
