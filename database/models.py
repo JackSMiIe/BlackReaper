@@ -1,6 +1,6 @@
 import datetime
 from datetime import timedelta
-from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, ForeignKey, BigInteger, Float
+from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, ForeignKey, BigInteger, Float, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.ext.declarative import declarative_base
@@ -18,9 +18,10 @@ class User(Base, Time):
 
     id = Column(Integer, primary_key=True)
     telegram_id = Column(BigInteger, nullable=False, unique=True)
-    username = Column(String, unique=True, nullable=False)
-    email = Column(String, unique=True, nullable=True)
+    username = Column(String, nullable=False)
+    email = Column(String, nullable=True)
     phone_number = Column(String, nullable=True)
+
     black_list = Column(Boolean, default=False)
     used_trial_product = Column(Boolean, default=False)
     is_vip = Column(Boolean, default=False)  # Поле для клиентов с максимальными привилегиями
@@ -68,8 +69,8 @@ class UserSubscription(Base):
     __tablename__ = 'user_subscriptions'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    product_id = Column(Integer, ForeignKey('products.id', ondelete='SET NULL'), nullable=True)  # Nullable для правильного удаления
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)  # Индекс на user_id
+    product_id = Column(Integer, ForeignKey('products.id', ondelete='SET NULL'), nullable=True, index=True)  # Индекс на product_id
     quantity = Column(Integer, default=1)
     start_date = Column(Date, nullable=False, default=func.now())
     end_date = Column(Date, nullable=False)
@@ -78,10 +79,20 @@ class UserSubscription(Base):
     user = relationship("User", back_populates="subscriptions")
     product = relationship("Product", back_populates="subscriptions")
 
+    # Добавляем два индекса:
+    # 1. Индекс на user_id и product_id
+    # 2. Комбинированный индекс на user_id, product_id и is_active
+    __table_args__ = (
+        Index('ix_user_product', 'user_id', 'product_id'),  # Индекс на пару user_id + product_id
+        Index('ix_user_product_active', 'user_id', 'product_id', 'is_active')  # Индекс на user_id + product_id + is_active
+    )
+
     def __repr__(self):
         return f"<UserSubscription(user_id={self.user_id}, product_id={self.product_id}, is_active={self.is_active})>"
 
     def __init__(self, user_id, product_id, quantity=1, is_active=True, product=None):
+        if not product:
+            raise ValueError("Product must be provided if no product_id is set.")
         self.user_id = user_id
         self.product_id = product_id
         self.quantity = quantity
@@ -93,7 +104,13 @@ class UserSubscription(Base):
             self.end_date = self.start_date + timedelta(days=product.count_day)
         else:
             self.end_date = None
-
+""" Запросы с использованием индексов:
+1. Поиск всех активных подписок для конкретного пользователя:
+    active_subscriptions = session.query(Product).join(UserSubscription).filter(
+    UserSubscription.user_id == user_id,
+    UserSubscription.is_active == True
+).all()
+"""
 class PurchaseHistory(Base):
     __tablename__ = 'purchase_history'
 
