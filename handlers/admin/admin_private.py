@@ -1,4 +1,5 @@
 from aiogram import Router, types, F
+from aiogram.filters import Command
 
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -8,23 +9,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.product_orm.add_product import add_product_to_db
 from filters.chat_types import ChatTypeFilter, IsAdmin
 from kbds.inline import get_inlineMix_btns
-from kbds.reply import get_keyboard
+from kbds.reply import get_keyboard, ADMIN_KB
 
 admin_router = Router()
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
 
 
-@admin_router.message(F.text == 'hello')
-async def start_cmd(message: types.Message, state: FSMContext):
-    # Проверяем, находится ли пользователь в черном списке
+# # Обработка команды /admin
+@admin_router.message(Command("admin"))
+async def admin_features(message: types.Message):
+    await message.answer("Что хотите сделать ⬇️", reply_markup=ADMIN_KB)
 
-    # Если пользователь не в черном списке, продолжаем выполнение
-    await state.clear()
-    await message.answer('Hello',reply_markup=get_inlineMix_btns(btns={
-        'Сюда': 'добавить товар_',
-    }))
+# Обработка кнопки '📦 Товары'
+@admin_router.message(F.text == '📦 Товары')
+async def menu_cmd(message: types.Message):
+    await message.answer(
+        '<b>Выберите действие:</b>',
+        reply_markup=get_inlineMix_btns(btns={
+            '🛒 Товары': 'add_product_',  # Добавить товар
+            '🎉 Акция': 'add_promotion_',  # Добавить акцию
+            '⏳ Пробный период': 'trial_period_',  # Пробный период
+            '📊 Ассортимент': 'product_range_',  # Ассортимент
+            '🏠 Главное меню': 'main_menu_'  # Главное меню
+        }),
+        parse_mode='HTML'  # Использование HTML для разметки
+    )
 
-
+""" --- Начало процесса добавления товара --- """
 # Определение состояний для процесса добавления товара
 class AddProduct(StatesGroup):
     name = State()          # Состояние для ввода названия товара
@@ -33,9 +44,8 @@ class AddProduct(StatesGroup):
     description = State()   # Состояние для ввода описания товара
 
 # Обработчик нажатия кнопки 'добавить товар'
-@admin_router.callback_query(F.data.startswith('добавить товар_'))
+@admin_router.callback_query(F.data.startswith('add_product_'))
 async def start_adding_product(callback: types.CallbackQuery, state: FSMContext):
-    print("Кнопка 'Добавить товар' нажата")  # Логирование для отслеживания событий
     await callback.message.answer("Введите название товара:", reply_markup=types.ReplyKeyboardRemove())
     await state.set_state(AddProduct.name)  # Переход к состоянию 'name'
 
@@ -96,6 +106,7 @@ async def process_product_description(message: types.Message, state: FSMContext,
     finally:
         await state.clear()  # Очистка состояния после завершения процесса
 
+"""--- Конец процесса добавления товара ---"""
 
 
 
